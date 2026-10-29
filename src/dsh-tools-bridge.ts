@@ -411,15 +411,19 @@ export async function runDshBridgeTool(
   }
   try {
     const result = await tools.execute({
-      callId: randomUUID() as unknown as ToolCallId,
-      name: options.toolName,
-      arguments: options.input,
+      calls: [{
+        type: 'tool-call',
+        id: randomUUID() as unknown as ToolCallId,
+        name: options.toolName,
+        arguments: JSON.stringify(options.input ?? {}),
+      }],
       agent: parent,
       signal: options.signal ?? new AbortController().signal,
     })
-    const content = result.content as readonly unknown[]
+    const first = result.results[0]?.result
+    const content = first?.content ?? []
     const text = blocksToText(content)
-    return result.isError
+    return first?.isError === true
       ? { output: text, isError: true }
       : { output: text, isError: false, content }
   } catch (error: unknown) {

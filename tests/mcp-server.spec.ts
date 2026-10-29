@@ -56,7 +56,12 @@ async function makeHarness(
         await new Promise(resolve => setTimeout(resolve, options.toolDelayMs))
       }
       if (options.toolsExecuteError === true) throw new Error('sandbox denied')
-      return { isError: false, content: [{ type: 'text', text: 'executed!' }] }
+      // 新批量 execute:单 call 包装成 ToolBatchResult(results[0].result 携带执行结果)。
+      return {
+        results: [{ callId: (call.calls as Array<{ id: string }>)[0]!.id, result: { isError: false, content: [{ type: 'text', text: 'executed!' }] } }],
+        additionalContexts: [],
+        concluded: false,
+      }
     },
   }
   const agentFace = {
@@ -187,7 +192,9 @@ describe('dsh MCP server:JSON-RPC over HTTP', () => {
       params: { name: 'grep', arguments: { pattern: 'needle' } },
     })
     expect(ok.json?.['result']).toEqual({ content: [{ type: 'text', text: 'executed!' }] })
-    expect(harness.executeCalls[0]).toMatchObject({ name: 'grep', arguments: { pattern: 'needle' } })
+    const firstCall = (harness.executeCalls[0]!['calls'] as Array<Record<string, unknown>>)[0]!
+    expect(firstCall).toMatchObject({ name: 'grep' })
+    expect(JSON.parse(firstCall['arguments'] as string)).toEqual({ pattern: 'needle' })
 
     const bad = await rpc(harness, {
       jsonrpc: '2.0', id: 4, method: 'tools/call',
@@ -215,16 +222,18 @@ describe('dsh MCP server:JSON-RPC over HTTP', () => {
       params: { name: 'pwsh', arguments: { command: 'node -e "console.log(1)"' } },
     })
     expect(first.json?.['result']).toEqual({ content: [{ type: 'text', text: 'executed!' }] })
-    expect(harness.executeCalls[0]).toMatchObject({
-      name: 'pwsh',
-      arguments: { command: 'node -e "console.log(1)"', description: 'node -e "console.log(1)"' },
+    const pwshFirst = (harness.executeCalls[0]!['calls'] as Array<Record<string, unknown>>)[0]!
+    expect(pwshFirst['name']).toBe('pwsh')
+    expect(JSON.parse(pwshFirst['arguments'] as string)).toEqual({
+      command: 'node -e "console.log(1)"', description: 'node -e "console.log(1)"',
     })
     // 模型自带描述时保持原样(不被覆盖)。
     await rpc(harness, {
       jsonrpc: '2.0', id: 22, method: 'tools/call',
       params: { name: 'pwsh', arguments: { command: 'ls', description: 'List files' } },
     })
-    expect(harness.executeCalls[1]).toMatchObject({ arguments: { command: 'ls', description: 'List files' } })
+    const pwshSecond = (harness.executeCalls[1]!['calls'] as Array<Record<string, unknown>>)[0]!
+    expect(JSON.parse(pwshSecond['arguments'] as string)).toEqual({ command: 'ls', description: 'List files' })
   })
 
   it('tools/call 结果含图片 → MCP content 带 image 块(base64;CLI 侧转 image_url 给模型)', async () => {

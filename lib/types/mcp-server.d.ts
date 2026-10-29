@@ -9,6 +9,23 @@
  * @module dsh-mcp/mcp-server
  */
 import type { Context } from '@deepseek-ai/cordis';
+import type { ContextFormed } from '@deepseek-ai/dsh-llm';
+/**
+ * 本插件补投消息的 source。
+ *
+ * 0.2.1 起 `MessageSourceMap` 是 merge-extensible 的:每个生产者在自己的
+ * 模块里声明 kind,通用的 `'plugin'` 兜底已退役——会话格式 v4 的准入校验
+ * 明确拒绝 `kind: 'plugin'`,保留旧值会让补投消息被拒("format v4 message
+ * requires a producer-owned source kind")。UI 按 `form: 'notice' + summary`
+ * 渲染折叠行,与 kind 无关。
+ */
+declare module '@deepseek-ai/dsh-llm' {
+    interface MessageSourceMap {
+        'dsh-mcp': {
+            kind: 'dsh-mcp';
+        } & ContextFormed;
+    }
+}
 import type { DshToolRunResult } from './dsh-tools-bridge.js';
 /** 端点路径(exact 路由,挂 dsh webserver)。 */
 export declare const DSH_MCP_ENDPOINT_PATH = "/api/dsh-mcp";

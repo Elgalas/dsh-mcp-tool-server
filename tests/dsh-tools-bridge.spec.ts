@@ -46,9 +46,15 @@ function makeBridgeCtx(options?: {
           },
           execute: async (exec: Record<string, unknown>) => {
             execCalls.push(exec)
-            return options?.execute === undefined
+            const single = options?.execute === undefined
               ? { isError: false, content: [{ type: 'text', text: 'done' }] }
               : await options.execute(exec)
+            // 新批量 execute:单 call 包装成 ToolBatchResult(results[0].result 携带执行结果)。
+            return {
+              results: [{ callId: (exec.calls as Array<{ id: string }>)[0]!.id, result: single }],
+              additionalContexts: [],
+              concluded: false,
+            }
           },
         }
       }
@@ -198,11 +204,12 @@ describe('runDshBridgeTool:执行转发', () => {
     // 原始内容块随结果回传:MCP 端点据此回传图片(delegate 通道只读 output)。
     expect(result.content).toEqual([{ type: 'text', text: 'hello bridge' }])
     expect(execCalls).toHaveLength(1)
-    expect(execCalls[0]!['name']).toBe('grep')
-    expect(execCalls[0]!['arguments']).toEqual({ pattern: 'x' })
+    const call = (execCalls[0]!['calls'] as Array<Record<string, unknown>>)[0]!
+    expect(call['name']).toBe('grep')
+    expect(JSON.parse(call['arguments'] as string)).toEqual({ pattern: 'x' })
     expect(execCalls[0]!['agent']).toEqual({ id: 'parent-1' })
     expect(execCalls[0]!['signal']).toBe(signal)
-    expect(typeof execCalls[0]!['callId']).toBe('string')
+    expect(typeof call['id']).toBe('string')
   })
 
   it('内容块转文本:嵌套 tool-result 递归,图片块降级为提示', async () => {
