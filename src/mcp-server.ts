@@ -149,18 +149,27 @@ export type McpLoopDispatcher = (
  * dsh loop 原生执行(审批/沙箱/事件/UI 卡片);泵不在(会话未跑回合)时回落
  * 直接执行({@link runDshBridgeTool})。
  */
-const loopDispatchers = new Map<string, McpLoopDispatcher>()
+const loopDispatchers = new Map<string, {
+  dispatch: McpLoopDispatcher
+  admittedTools?: () => ReadonlySet<string> | undefined
+}>()
 
 /**
  * 注册/注销会话的 MCP→loop 转发器(回合泵构造/释放时调用;幂等注销)。
  * @param sessionId - dsh 会话 id。
  * @param dispatch - 转发实现。
+ * @param admittedTools - 当前模型 step 已准入的工具名。
  * @returns 注销函数。
  */
-export function registerMcpLoopDispatcher(sessionId: string, dispatch: McpLoopDispatcher): () => void {
-  loopDispatchers.set(sessionId, dispatch)
+export function registerMcpLoopDispatcher(
+  sessionId: string,
+  dispatch: McpLoopDispatcher,
+  admittedTools?: () => ReadonlySet<string> | undefined,
+): () => void {
+  const entry = { dispatch, admittedTools }
+  loopDispatchers.set(sessionId, entry)
   return () => {
-    if (loopDispatchers.get(sessionId) === dispatch) loopDispatchers.delete(sessionId)
+    if (loopDispatchers.get(sessionId) === entry) loopDispatchers.delete(sessionId)
   }
 }
 
@@ -529,17 +538,18 @@ async function handleMcpRequest(ctx: Context, req: IncomingMessage, res: ServerR
     const agents = (ctx as unknown as { get: (key: string) => unknown }).get('agents') as AgentsFace | undefined
     return agents?.get?.(sessionId) as Agent | undefined
   }
+  const dispatcher = loopDispatchers.get(sessionId)
+  const listTools = (agent: Agent) => listDshMcpTools(ctx, agent, dispatcher?.admittedTools?.())
   /**
    * 本会话**可见**的 dsh 工具名集合(与 tools/list 同源)。
    *
    * tools/call 必须按这份名单校验,不能只查命名形态:`isBridgeEligible` 只排
    * 除保留名,不体现 per-agent scope——只用它会让持有 key 的调用方绕过
    * tools/list 的工具面裁剪,调到本会话看不到的工具。
-   * @returns 可见工具名;会话无活跃 agent 时 undefined(无从校验 → 一律拒绝)。
+   * @returns 可见工具名。
    */
-  const visibleToolNames = (agent: Agent | undefined): Set<string> | undefined => {
-    if (agent === undefined) return undefined
-    return new Set(listDshMcpTools(ctx, agent).map(tool => tool.name))
+  const visibleToolNames = (agent: Agent): Set<string> => {
+    return new Set(listTools(agent).map(tool => tool.name))
   }
   switch (msg.method) {
     case 'initialize':
@@ -554,7 +564,7 @@ async function handleMcpRequest(ctx: Context, req: IncomingMessage, res: ServerR
       return
     case 'tools/list': {
       const agent = agentOf()
-      respond({ tools: agent === undefined ? [] : listDshMcpTools(ctx, agent) })
+      respond({ tools: agent === undefined ? [] : listTools(agent) })
       return
     }
     case 'tools/call': {
@@ -568,10 +578,11 @@ async function handleMcpRequest(ctx: Context, req: IncomingMessage, res: ServerR
       }
       // 可见性校验(纵深防御):会话无活跃 agent、或该工具不在本会话工具面内
       // → 拒绝。tools/list 是契约,这里必须与它口径一致。
-      const visible = visibleToolNames(agentOf())
-      if (visible === undefined) {
+      const agent = agentOf()
+      if (agent === undefined) {
         return toolError(`dsh tool "${name}" 不可用:会话 ${sessionId || '(缺失)'} 没有活跃的 agent`)
       }
+      const visible = visibleToolNames(agent)
       if (!visible.has(name)) {
         console.error(`[dsh-mcp] MCP tools/call 越权拒绝:session=${sessionId}`
           + ` tool=${name}(不在本会话可见工具面内)`)
@@ -586,14 +597,13 @@ async function handleMcpRequest(ctx: Context, req: IncomingMessage, res: ServerR
       )
       // 优先转发进 dsh loop(原生执行:审批/沙箱/事件/UI 卡片,tool/call 与
       // tool/result 进会话时间线);无活跃回合泵时降级为直接执行。
-      const dispatcher = loopDispatchers.get(sessionId)
       if (dispatcher !== undefined) {
         try {
           // 迟到投递口:转发超时后 CLI 收到的是超时错误;工具稍后完成时,
           // 泵经此把真实结果补投回会话(交互式工具全靠它,否则答案永久丢失)。
           // 只投文本:CLI 已按超时放弃,图片块没有可回灌的通道(补投是会话内
           // 记录,不是 MCP 响应)。
-          const result = await dispatcher(sessionId, name, input, (lateTool, lateText) => {
+          const result = await dispatcher.dispatch(sessionId, name, input, (lateTool, lateText) => {
             const line = `[dsh-mcp] MCP 转发超时后结果补投:session=${sessionId}`
               + ` tool=${lateTool} 工具总耗时=${Date.now() - requestedAt}ms`
             console.error(line)
@@ -643,6 +653,9 @@ async function handleMcpRequest(ctx: Context, req: IncomingMessage, res: ServerR
           console.error(fallbackLine)
           bridgeLog(fallbackLine)
         }
+      }
+      if (dispatcher !== undefined && !listDshMcpTools(ctx, agent).some(tool => tool.name === name)) {
+        return toolError(`dsh tool "${name}" requires an active model step`)
       }
       const result = await runDshBridgeTool(ctx, {
         parentSessionId: sessionId,

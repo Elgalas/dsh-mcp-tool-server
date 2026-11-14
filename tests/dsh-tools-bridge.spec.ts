@@ -15,6 +15,7 @@ import {
   bridgeToolId,
   isBridgeEligible,
   listDshBridgeTools,
+  listDshMcpTools,
   runDshBridgeTool,
 } from '../src/dsh-tools-bridge.ts'
 
@@ -30,6 +31,7 @@ function makeBridgeCtx(options?: {
   noTools?: boolean
   noParent?: boolean
   execute?: (exec: Record<string, unknown>) => Promise<unknown>
+  executable?: (name: string) => unknown
 }): { ctx: Context; execCalls: Array<Record<string, unknown>> } {
   const execCalls: Array<Record<string, unknown>> = []
   const ctx = {
@@ -44,6 +46,7 @@ function makeBridgeCtx(options?: {
             if (options?.schemasThrows === true) throw new Error('schemas exploded')
             return options?.schemas ?? []
           },
+          executable: options?.executable,
           execute: async (exec: Record<string, unknown>) => {
             execCalls.push(exec)
             const single = options?.execute === undefined
@@ -63,6 +66,16 @@ function makeBridgeCtx(options?: {
   } as unknown as Context
   return { ctx, execCalls }
 }
+
+it('limits MCP discovery to the active step or tools executable outside a step', () => {
+  const { ctx } = makeBridgeCtx({
+    schemas: [{ name: 'plain' }, { name: 'enabled' }, { name: 'disabled' }],
+    executable: name => name === 'plain' ? {} : undefined,
+  })
+  const agent = ctx.get('agents')!.get('test' as never)!
+  expect(listDshMcpTools(ctx, agent).map(tool => tool.name)).toEqual(['plain'])
+  expect(listDshMcpTools(ctx, agent, new Set(['plain', 'enabled'])).map(tool => tool.name)).toEqual(['plain', 'enabled'])
+})
 
 describe('bridgeToolId / bridgeTargetTool:命名与排除', () => {
   it('dsh_<原名> 往返映射;完全统一后 shell/subagent 也走桥;run_code 与 MCP 不认', () => {

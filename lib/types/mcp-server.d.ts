@@ -67,9 +67,10 @@ lateSink?: (toolName: string, text: string) => void) => Promise<DshToolRunResult
  * 注册/注销会话的 MCP→loop 转发器(回合泵构造/释放时调用;幂等注销)。
  * @param sessionId - dsh 会话 id。
  * @param dispatch - 转发实现。
+ * @param admittedTools - 当前模型 step 已准入的工具名。
  * @returns 注销函数。
  */
-export declare function registerMcpLoopDispatcher(sessionId: string, dispatch: McpLoopDispatcher): () => void;
+export declare function registerMcpLoopDispatcher(sessionId: string, dispatch: McpLoopDispatcher, admittedTools?: () => ReadonlySet<string> | undefined): () => void;
 /**
  * 本 MCP 端点的完整 URL(含 session/key);端点未就绪时 undefined。
  * 各 CLI 桥用它生成自己的配置(codebuddy 的 --mcp-config 文件;agy 的

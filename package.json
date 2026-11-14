@@ -1,6 +1,6 @@
 {
   "name": "@flg1217/dsh-mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Shared dsh MCP server for CLI bridges (codebuddy / agy): exposes session-visible dsh tools over MCP (JSON-RPC) so external CLIs execute them through the official dsh tool pipeline. Zero-config infrastructure plugin, installed automatically as a dependency of the bridge plugins.",
   "type": "module",
   "main": "./lib/index.js",

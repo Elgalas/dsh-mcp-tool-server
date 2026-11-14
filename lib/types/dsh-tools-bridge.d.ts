@@ -88,7 +88,7 @@ export interface McpToolSpec {
  * @param parent - 会话的 agent(scope 与执行归属)。
  * @returns MCP 工具条目(每次调用现算)。
  */
-export declare function listDshMcpTools(ctx: Context, parent: Agent): McpToolSpec[];
+export declare function listDshMcpTools(ctx: Context, parent: Agent, admitted?: ReadonlySet<string>): McpToolSpec[];
 /**
  * 桥工具执行结果。
  *

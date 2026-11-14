@@ -236,9 +236,12 @@ export interface McpToolSpec {
  * @param parent - 会话的 agent(scope 与执行归属)。
  * @returns MCP 工具条目(每次调用现算)。
  */
-export function listDshMcpTools(ctx: Context, parent: Agent): McpToolSpec[] {
+export function listDshMcpTools(ctx: Context, parent: Agent, admitted?: ReadonlySet<string>): McpToolSpec[] {
   const tools = (ctx as unknown as { get?: (key: string) => unknown }).get?.('tools') as
-    | { schemas?: (scope?: unknown) => readonly DshToolSchemaFace[] }
+    | {
+        schemas?: (scope?: unknown) => readonly DshToolSchemaFace[]
+        executable?: (name: string, scope: Agent) => unknown
+      }
     | undefined
   let schemas: readonly DshToolSchemaFace[]
   try {
@@ -253,6 +256,11 @@ export function listDshMcpTools(ctx: Context, parent: Agent): McpToolSpec[] {
   const specs: McpToolSpec[] = []
   for (const schema of schemas) {
     if (typeof schema?.name !== 'string' || !isBridgeEligible(schema.name)) continue
+    if (admitted !== undefined) {
+      if (!admitted.has(schema.name)) continue
+    } else if (tools?.executable !== undefined && tools.executable(schema.name, parent) === undefined) {
+      continue
+    }
     const inputSchema = (schema.parameters !== null && typeof schema.parameters === 'object'
       ? schema.parameters
       : { type: 'object', properties: {} }) as Record<string, unknown>

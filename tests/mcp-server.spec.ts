@@ -204,9 +204,10 @@ describe('dsh MCP server:JSON-RPC over HTTP', () => {
   })
 
   it('命令工具漏填 description(仅 UI 元数据)时自动派生;已有描述不覆盖', async () => {
+    const shell = process.platform === 'win32' ? 'pwsh' : 'bash'
     harness = await makeHarness({
       extraSchemas: [{
-        name: 'pwsh',
+        name: shell,
         description: 'Execute a command.',
         parameters: {
           type: 'object',
@@ -219,18 +220,18 @@ describe('dsh MCP server:JSON-RPC over HTTP', () => {
     // (会话 914637da 实证)。端点派生兜底后首次调用即成功。
     const first = await rpc(harness, {
       jsonrpc: '2.0', id: 21, method: 'tools/call',
-      params: { name: 'pwsh', arguments: { command: 'node -e "console.log(1)"' } },
+      params: { name: shell, arguments: { command: 'node -e "console.log(1)"' } },
     })
     expect(first.json?.['result']).toEqual({ content: [{ type: 'text', text: 'executed!' }] })
     const pwshFirst = (harness.executeCalls[0]!['calls'] as Array<Record<string, unknown>>)[0]!
-    expect(pwshFirst['name']).toBe('pwsh')
+    expect(pwshFirst['name']).toBe(shell)
     expect(JSON.parse(pwshFirst['arguments'] as string)).toEqual({
       command: 'node -e "console.log(1)"', description: 'node -e "console.log(1)"',
     })
     // 模型自带描述时保持原样(不被覆盖)。
     await rpc(harness, {
       jsonrpc: '2.0', id: 22, method: 'tools/call',
-      params: { name: 'pwsh', arguments: { command: 'ls', description: 'List files' } },
+      params: { name: shell, arguments: { command: 'ls', description: 'List files' } },
     })
     const pwshSecond = (harness.executeCalls[1]!['calls'] as Array<Record<string, unknown>>)[0]!
     expect(JSON.parse(pwshSecond['arguments'] as string)).toEqual({ command: 'ls', description: 'List files' })
