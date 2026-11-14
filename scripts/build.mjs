@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Build @flg1217/dsh-mcp:tsc 编译 src/*.ts → lib/*.js + lib/types/*.d.ts。
+ * Build @flg1217/dsh-mcp-tool-server:tsc 编译 src/*.ts → lib/*.js + lib/types/*.d.ts。
  * 纯服务端插件(无客户端 bundle)。
  */
 import { execFileSync } from 'node:child_process'

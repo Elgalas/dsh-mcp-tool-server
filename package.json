@@ -1,7 +1,7 @@
 {
-  "name": "@flg1217/dsh-mcp",
-  "version": "0.1.1",
-  "description": "Shared dsh MCP server for CLI bridges (codebuddy / agy): exposes session-visible dsh tools over MCP (JSON-RPC) so external CLIs execute them through the official dsh tool pipeline. Zero-config infrastructure plugin, installed automatically as a dependency of the bridge plugins.",
+  "name": "@flg1217/dsh-mcp-tool-server",
+  "version": "0.1.2",
+  "description": "MCP server that exposes session-visible DeepSeek Harness tools to external CLI clients such as CodeBuddy. Tool calls run through the Harness tool pipeline.",
   "type": "module",
   "main": "./lib/index.js",
   "types": "./lib/types/index.d.ts",
@@ -20,7 +20,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/flg1217/dsh-mcp.git"
+    "url": "https://github.com/Elgalas/dsh-subagent-codebuddy.git"
   },
   "scripts": {
     "build": "node scripts/build.mjs",

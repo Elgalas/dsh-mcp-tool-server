@@ -1,6 +1,6 @@
 /**
  * dsh 工具通用桥的协议面测试(从 codebuddy 迁入,实现已移入共享包
- * @flg1217/dsh-mcp 的 dsh-tools-bridge.ts):
+ * @flg1217/dsh-mcp-tool-server 的 dsh-tools-bridge.ts):
  * - 列工具:schemas(agent) → `dsh_<原名>` 描述符(排除表/描述引导/inputSchema);
  * - 命名:bridgeToolId / bridgeTargetTool 的映射与排除;
  * - 执行:tools.execute 官方管线转发、内容块转文本、错误按协议回落;
