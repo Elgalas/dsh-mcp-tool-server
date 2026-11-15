@@ -1,6 +1,6 @@
 # dsh-mcp-tool-server
 
-`@flg1217/dsh-mcp-tool-server` 是 DeepSeek Harness 的 MCP 服务端插件。它把 dsh 会话可见的工具提供给 CodeBuddy 等外部客户端，工具调用由 dsh 的执行管线处理。
+`@elgalas/dsh-mcp-tool-server` 是 DeepSeek Harness 的 MCP 服务端插件。它把 dsh 会话可见的工具提供给 CodeBuddy 等外部客户端，工具调用由 dsh 的执行管线处理。
 
 ## 安装
 
@@ -12,7 +12,7 @@ dsh plugin --profile web add github:Elgalas/dsh-mcp-tool-server#master
 
 桌面版可在插件页面添加同一个 GitHub 来源。安装完工具服务器后，再安装使用它的 [CodeBuddy 插件](https://github.com/Elgalas/dsh-subagent-codebuddy)。
 
-如果该 profile 装有旧包 `@flg1217/dsh-mcp`，请更新所有依赖旧包的插件后再移除它。来源仓库为 [flg1217/dsh-mcp](https://github.com/flg1217/dsh-mcp)。
+从旧包名迁移时，先确认同一 profile 里的客户端插件都支持新包名，再卸载旧共享包并安装新包。新包沿用 `dsh-mcp-tool-server` 配置条目 ID。
 
 ## 工具面来源（0.1.3）
 
@@ -23,3 +23,6 @@ dsh plugin --profile web add github:Elgalas/dsh-mcp-tool-server#master
 - `tools/call` 的准入闸门用同一份面判断：面内即放行，面外返回 `unknown dsh tool`。
 - 导出 `DshSurfaceTool`、`TRANSPORT_TOOL_NAMES`、`isSurfaceCallable`、`isSurfaceList`。
 
+## 来源与致谢
+
+本项目由 Elgalas 维护，fork 自 [flg1217/dsh-mcp](https://github.com/flg1217/dsh-mcp)。感谢 flg1217 的原始实现与贡献。

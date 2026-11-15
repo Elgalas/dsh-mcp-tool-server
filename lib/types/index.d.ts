@@ -1,5 +1,5 @@
 /**
- * 共享 MCP 插件(@flg1217/dsh-mcp-tool-server):为 codebuddy / agy 两个 CLI 桥提供统一的
+ * 共享 MCP 插件(@elgalas/dsh-mcp-tool-server):为 codebuddy / agy 两个 CLI 桥提供统一的
  * dsh MCP 端点(端点注册、key、工具面、执行、图片回传;实现见 mcp-server.ts)。
  *
  * 将本插件添加到客户端桥所在的 profile。dsh 会根据 `dsh.bundle` 声明装载它，

@@ -1,7 +1,8 @@
 {
-  "name": "@flg1217/dsh-mcp-tool-server",
+  "name": "@elgalas/dsh-mcp-tool-server",
   "version": "0.1.3",
-  "description": "MCP server that exposes session-visible DeepSeek Harness tools to external CLI clients such as CodeBuddy. Tool calls run through the Harness tool pipeline.",
+  "description": "MCP tool server for DeepSeek Harness (DSH) that exposes session-visible tools to CodeBuddy and other CLI clients.",
+  "homepage": "https://github.com/Elgalas/dsh-mcp-tool-server#readme",
   "type": "module",
   "main": "./lib/index.js",
   "types": "./lib/types/index.d.ts",
