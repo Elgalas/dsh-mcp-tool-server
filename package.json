@@ -1,6 +1,6 @@
 {
   "name": "@flg1217/dsh-mcp-tool-server",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "MCP server that exposes session-visible DeepSeek Harness tools to external CLI clients such as CodeBuddy. Tool calls run through the Harness tool pipeline.",
   "type": "module",
   "main": "./lib/index.js",
