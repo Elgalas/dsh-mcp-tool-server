@@ -42,6 +42,39 @@ export declare const BRIDGE_TOOL_PREFIX = "dsh_";
  * 让镜像统一叫 `cli_read`,与真工具彻底分名,桥照旧解析真 `read`。
  */
 export declare const CLI_MIRROR_TOOL_PREFIX = "cli_";
+/**
+ * 模型可见工具面的一条(来自 `system-prompt/assemble` 的 `assembly.tools`)。
+ *
+ * 与 {@link DshToolSchemaFace} 的区别是来源:注册表(`tools.schemas()`)只含
+ * 真工具,而**执行器提供的传输工具**(PTC 的 `run_code`)只出现在模型可见面
+ * 里。宿主对 `run_code` 的判定是"只有它能被直接调用",桥若继续按注册表列
+ * 工具,CLI 侧工具面就与模型实际能力脱节(旧会话正是这样把子代理逼成空工具
+ * 面:模型被告知只能调 run_code,而 run_code 不在 CLI 的工具表里)。
+ */
+export interface DshSurfaceTool {
+    readonly name: string;
+    readonly description?: string;
+    readonly parameters?: unknown;
+}
+/**
+ * 传输类工具:不在注册表、由执行器提供,但模型可见即可直接调用。
+ *
+ * 目前只有 PTC 的 `run_code` 与 delegate 模式的 `DelegateTool`——后者不是 MCP
+ * 工具,故只登记前者。
+ */
+export declare const TRANSPORT_TOOL_NAMES: ReadonlySet<string>;
+/**
+ * 该名字在当前工具面里是否可调用。
+ *
+ * 有工具面时以工具面为准(注册表过滤已由宿主完成,传输工具也在此命中);
+ * 无工具面时退回注册表资格判定。`run_code` 仍需显式出现在面里才放行——
+ * 原生(function calling)会话里它不该存在。
+ * @param name - 裸工具名。
+ * @param surface - 当前模型可见工具面;undefined 表示未知(按注册表判定)。
+ * @returns 是否可调用。
+ */
+export declare function isSurfaceList(surface: readonly DshSurfaceTool[] | ReadonlySet<string> | undefined): surface is readonly DshSurfaceTool[];
+export declare function isSurfaceCallable(name: string, surface?: readonly DshSurfaceTool[] | ReadonlySet<string>): boolean;
 /** dsh 工具名 → 桥工具 id。 */
 export declare function bridgeToolId(name: string): string;
 /** 桥工具 id → dsh 工具名;非桥命名、ptc 保留名、MCP 或 CLI 镜像名时返回 undefined。 */
@@ -88,7 +121,7 @@ export interface McpToolSpec {
  * @param parent - 会话的 agent(scope 与执行归属)。
  * @returns MCP 工具条目(每次调用现算)。
  */
-export declare function listDshMcpTools(ctx: Context, parent: Agent, admitted?: ReadonlySet<string>): McpToolSpec[];
+export declare function listDshMcpTools(ctx: Context, parent: Agent, surface?: readonly DshSurfaceTool[] | ReadonlySet<string>): McpToolSpec[];
 /**
  * 桥工具执行结果。
  *

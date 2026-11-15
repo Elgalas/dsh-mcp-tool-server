@@ -33,7 +33,8 @@ declare module '@deepseek-ai/dsh-llm' {
     'dsh-mcp': { kind: 'dsh-mcp' } & ContextFormed
   }
 }
-import { blocksToMcpContent, isBridgeEligible, listDshMcpTools, runDshBridgeTool } from './dsh-tools-bridge.js'
+import { blocksToMcpContent, isSurfaceCallable, listDshMcpTools, runDshBridgeTool } from './dsh-tools-bridge.js'
+import type { DshSurfaceTool } from './dsh-tools-bridge.js'
 import type { AttachmentsReadFace, DshToolRunResult, McpContentPart } from './dsh-tools-bridge.js'
 
 /** 端点路径(exact 路由,挂 dsh webserver)。 */
@@ -151,22 +152,22 @@ export type McpLoopDispatcher = (
  */
 const loopDispatchers = new Map<string, {
   dispatch: McpLoopDispatcher
-  admittedTools?: () => ReadonlySet<string> | undefined
+  surface?: () => readonly DshSurfaceTool[] | ReadonlySet<string> | undefined
 }>()
 
 /**
  * 注册/注销会话的 MCP→loop 转发器(回合泵构造/释放时调用;幂等注销)。
  * @param sessionId - dsh 会话 id。
  * @param dispatch - 转发实现。
- * @param admittedTools - 当前模型 step 已准入的工具名。
+ * @param surface - 读当前模型可见工具面(含 PTC 的 run_code 这类传输工具)。
  * @returns 注销函数。
  */
 export function registerMcpLoopDispatcher(
   sessionId: string,
   dispatch: McpLoopDispatcher,
-  admittedTools?: () => ReadonlySet<string> | undefined,
+  surface?: () => readonly DshSurfaceTool[] | ReadonlySet<string> | undefined,
 ): () => void {
-  const entry = { dispatch, admittedTools }
+  const entry = { dispatch, surface }
   loopDispatchers.set(sessionId, entry)
   return () => {
     if (loopDispatchers.get(sessionId) === entry) loopDispatchers.delete(sessionId)
@@ -539,7 +540,7 @@ async function handleMcpRequest(ctx: Context, req: IncomingMessage, res: ServerR
     return agents?.get?.(sessionId) as Agent | undefined
   }
   const dispatcher = loopDispatchers.get(sessionId)
-  const listTools = (agent: Agent) => listDshMcpTools(ctx, agent, dispatcher?.admittedTools?.())
+  const listTools = (agent: Agent) => listDshMcpTools(ctx, agent, dispatcher?.surface?.())
   /**
    * 本会话**可见**的 dsh 工具名集合(与 tools/list 同源)。
    *
@@ -573,7 +574,7 @@ async function handleMcpRequest(ctx: Context, req: IncomingMessage, res: ServerR
       // 数字,而这份日志正是标定 CLI 侧工具超时 T_client 的唯一依据。
       const requestedAt = Date.now()
       const name = msg.params?.['name']
-      if (typeof name !== 'string' || !isBridgeEligible(name)) {
+      if (typeof name !== 'string' || !isSurfaceCallable(name, dispatcher?.surface?.())) {
         return toolError(`unknown dsh tool: ${String(name)}`)
       }
       // 可见性校验(纵深防御):会话无活跃 agent、或该工具不在本会话工具面内

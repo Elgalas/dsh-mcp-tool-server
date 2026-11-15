@@ -90,6 +90,51 @@ interface DshToolSchemaFace {
   readonly parameters?: unknown
 }
 
+/**
+ * 模型可见工具面的一条(来自 `system-prompt/assemble` 的 `assembly.tools`)。
+ *
+ * 与 {@link DshToolSchemaFace} 的区别是来源:注册表(`tools.schemas()`)只含
+ * 真工具,而**执行器提供的传输工具**(PTC 的 `run_code`)只出现在模型可见面
+ * 里。宿主对 `run_code` 的判定是"只有它能被直接调用",桥若继续按注册表列
+ * 工具,CLI 侧工具面就与模型实际能力脱节(旧会话正是这样把子代理逼成空工具
+ * 面:模型被告知只能调 run_code,而 run_code 不在 CLI 的工具表里)。
+ */
+export interface DshSurfaceTool {
+  readonly name: string
+  readonly description?: string
+  readonly parameters?: unknown
+}
+
+/**
+ * 传输类工具:不在注册表、由执行器提供,但模型可见即可直接调用。
+ *
+ * 目前只有 PTC 的 `run_code` 与 delegate 模式的 `DelegateTool`——后者不是 MCP
+ * 工具,故只登记前者。
+ */
+export const TRANSPORT_TOOL_NAMES: ReadonlySet<string> = new Set(['run_code'])
+
+/**
+ * 该名字在当前工具面里是否可调用。
+ *
+ * 有工具面时以工具面为准(注册表过滤已由宿主完成,传输工具也在此命中);
+ * 无工具面时退回注册表资格判定。`run_code` 仍需显式出现在面里才放行——
+ * 原生(function calling)会话里它不该存在。
+ * @param name - 裸工具名。
+ * @param surface - 当前模型可见工具面;undefined 表示未知(按注册表判定)。
+ * @returns 是否可调用。
+ */
+export function isSurfaceList(
+  surface: readonly DshSurfaceTool[] | ReadonlySet<string> | undefined,
+): surface is readonly DshSurfaceTool[] {
+  return Array.isArray(surface)
+}
+
+export function isSurfaceCallable(name: string, surface?: readonly DshSurfaceTool[] | ReadonlySet<string>): boolean {
+  if (surface === undefined) return isBridgeEligible(name)
+  if (!isSurfaceList(surface)) return surface.has(name)
+  return (surface as readonly DshSurfaceTool[]).some(tool => tool.name === name)
+}
+
 /** 执行类工具的桥描述补充:强引导后台任务语义(默认后台 = dsh job)。 */
 const EXECUTION_TOOLS = new Set(['bash', 'pwsh'])
 
@@ -236,7 +281,33 @@ export interface McpToolSpec {
  * @param parent - 会话的 agent(scope 与执行归属)。
  * @returns MCP 工具条目(每次调用现算)。
  */
-export function listDshMcpTools(ctx: Context, parent: Agent, admitted?: ReadonlySet<string>): McpToolSpec[] {
+export function listDshMcpTools(
+  ctx: Context,
+  parent: Agent,
+  surface?: readonly DshSurfaceTool[] | ReadonlySet<string>,
+): McpToolSpec[] {
+  // 工具面优先:它已经是"模型这一 step 能看到的东西"的完整投影(含 run_code
+  // 这类传输工具),直接照抄即可,无需再回注册表——注册表里根本没有 run_code。
+  if (isSurfaceList(surface)) {
+    const specs: McpToolSpec[] = []
+    for (const tool of surface) {
+      if (typeof tool?.name !== 'string' || tool.name.length === 0) continue
+      if (!isBridgeEligible(tool.name) && !TRANSPORT_TOOL_NAMES.has(tool.name)) continue
+      const inputSchema = (tool.parameters !== null && typeof tool.parameters === 'object'
+        ? tool.parameters
+        : { type: 'object', properties: {} }) as Record<string, unknown>
+      const base = typeof tool.description === 'string' && tool.description.trim().length > 0
+        ? tool.description.trim()
+        : `(the dsh-side tool "${tool.name}")`
+      specs.push({
+        name: tool.name,
+        description: EXECUTION_TOOLS.has(tool.name) ? base + EXECUTION_HINT : base,
+        inputSchema,
+      })
+    }
+    return specs
+  }
+  const admitted = isSurfaceList(surface) ? undefined : surface
   const tools = (ctx as unknown as { get?: (key: string) => unknown }).get?.('tools') as
     | {
         schemas?: (scope?: unknown) => readonly DshToolSchemaFace[]

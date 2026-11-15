@@ -9,6 +9,6 @@
 import type { Context } from '@deepseek-ai/cordis';
 export { DSH_MCP_ENDPOINT_PATH, DSH_MCP_SERVER_NAME, dshMcpEndpointUrl, McpDispatchAbortedError, McpDispatchTimeoutError, registerDshMcpServer, registerMcpLoopDispatcher } from './mcp-server.js';
 export type { McpLoopDispatcher } from './mcp-server.js';
-export { blocksToMcpContent, blocksToText, BRIDGE_TOOL_PREFIX, bridgeTargetTool, bridgeToolId, CLI_MIRROR_TOOL_PREFIX, isBridgeEligible, listDshBridgeTools, listDshMcpTools, runDshBridgeTool, } from './dsh-tools-bridge.js';
-export type { AttachmentsReadFace, DelegateToolSpec, DshToolRunResult, McpContentPart, McpToolSpec } from './dsh-tools-bridge.js';
+export { blocksToMcpContent, blocksToText, BRIDGE_TOOL_PREFIX, bridgeTargetTool, bridgeToolId, CLI_MIRROR_TOOL_PREFIX, isBridgeEligible, isSurfaceCallable, isSurfaceList, listDshBridgeTools, listDshMcpTools, runDshBridgeTool, TRANSPORT_TOOL_NAMES, } from './dsh-tools-bridge.js';
+export type { AttachmentsReadFace, DelegateToolSpec, DshSurfaceTool, DshToolRunResult, McpContentPart, McpToolSpec } from './dsh-tools-bridge.js';
 export declare function apply(ctx: Context): void;

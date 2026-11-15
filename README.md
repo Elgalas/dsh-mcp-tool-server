@@ -13,3 +13,13 @@ dsh plugin --profile web add github:Elgalas/dsh-mcp-tool-server#master
 桌面版可在插件页面添加同一个 GitHub 来源。安装完工具服务器后，再安装使用它的 [CodeBuddy 插件](https://github.com/Elgalas/dsh-subagent-codebuddy)。
 
 如果该 profile 装有旧包 `@flg1217/dsh-mcp`，请更新所有依赖旧包的插件后再移除它。来源仓库为 [flg1217/dsh-mcp](https://github.com/flg1217/dsh-mcp)。
+
+## 工具面来源（0.1.3）
+
+`tools/list` 的工具清单按**调用方给出的工具面**生成，而不是按 dsh 的注册表：
+
+- `subagent` 后端（PTC 会话）里，模型唯一能直接调用的工具是执行器传输工具 `run_code`——它不在注册表里，旧版按注册表生成会把工具面做成空集（表现为 CLI 侧 `unknown tool "read"`）。
+- 现在 `registerMcpLoopDispatcher(sessionId, dispatch, surface?)` 接受可选 `surface`：`{ name, description?, parameters? }[]`（按面原样投影）或 `ReadonlySet<string>`（旧形态）。
+- `tools/call` 的准入闸门用同一份面判断：面内即放行，面外返回 `unknown dsh tool`。
+- 导出 `DshSurfaceTool`、`TRANSPORT_TOOL_NAMES`、`isSurfaceCallable`、`isSurfaceList`。
+

@@ -20,11 +20,14 @@ export {
   bridgeToolId,
   CLI_MIRROR_TOOL_PREFIX,
   isBridgeEligible,
+  isSurfaceCallable,
+  isSurfaceList,
   listDshBridgeTools,
   listDshMcpTools,
   runDshBridgeTool,
+  TRANSPORT_TOOL_NAMES,
 } from './dsh-tools-bridge.js'
-export type { AttachmentsReadFace, DelegateToolSpec, DshToolRunResult, McpContentPart, McpToolSpec } from './dsh-tools-bridge.js'
+export type { AttachmentsReadFace, DelegateToolSpec, DshSurfaceTool, DshToolRunResult, McpContentPart, McpToolSpec } from './dsh-tools-bridge.js'
 
 export function apply(ctx: Context): void {
   // 挂 MCP 端点(webServer 就绪时注册;卸载/热重载自动释放)。
